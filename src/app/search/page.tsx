@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,21 +18,20 @@ interface Asset {
 export default function SearchPage() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const searchParams = useSearchParams()
-  const query = searchParams.get('q') || ''
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    // Get query from URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const q = urlParams.get('q') || ''
+    setQuery(q)
 
-  useEffect(() => {
-    if (mounted && query) {
-      searchAssets(query)
-    } else if (mounted) {
+    if (q) {
+      searchAssets(q)
+    } else {
       setLoading(false)
     }
-  }, [query, mounted])
+  }, [])
 
   const searchAssets = async (searchQuery: string) => {
     const { data, error } = await supabase
@@ -53,16 +51,6 @@ export default function SearchPage() {
       setAssets(assetsWithProfiles)
     }
     setLoading(false)
-  }
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">Loading...</div>
-        </div>
-      </div>
-    )
   }
 
   return (
