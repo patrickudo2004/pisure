@@ -44,11 +44,17 @@ CREATE POLICY "Users can update own profile" ON profiles
 CREATE POLICY "Approved assets are viewable by everyone" ON assets
   FOR SELECT USING (approved = true);
 
+CREATE POLICY "Admins can view all assets" ON assets
+  FOR SELECT USING (auth.jwt() ->> 'email' = 'patrickudo2004@outlook.com');
+
 CREATE POLICY "Users can insert their own assets" ON assets
   FOR INSERT WITH CHECK (auth.uid() = uploader_id);
 
 CREATE POLICY "Users can update own assets" ON assets
   FOR UPDATE USING (auth.uid() = uploader_id);
+
+CREATE POLICY "Admins can update all assets" ON assets
+  FOR UPDATE USING (auth.jwt() ->> 'email' = 'patrickudo2004@outlook.com');
 
 -- Create storage bucket for assets
 INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', false);
