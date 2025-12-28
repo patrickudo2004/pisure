@@ -65,6 +65,9 @@ CREATE POLICY "Anyone can view approved assets" ON storage.objects
     SELECT storage_path FROM assets WHERE approved = true
   ));
 
+CREATE POLICY "Admins can view all assets" ON storage.objects
+  FOR SELECT USING (bucket_id = 'assets' AND auth.jwt() ->> 'email' = 'patrickudo2004@outlook.com');
+
 CREATE POLICY "Authenticated users can upload assets" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'assets' AND auth.role() = 'authenticated');
 
@@ -73,6 +76,9 @@ CREATE POLICY "Users can update own assets" ON storage.objects
 
 CREATE POLICY "Users can delete own assets" ON storage.objects
   FOR DELETE USING (bucket_id = 'assets' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Admins can delete all assets" ON storage.objects
+  FOR DELETE USING (bucket_id = 'assets' AND auth.jwt() ->> 'email' = 'patrickudo2004@outlook.com');
 
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
