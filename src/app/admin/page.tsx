@@ -36,13 +36,18 @@ export default function AdminPage() {
   const fetchPendingAssets = async () => {
     const { data, error } = await supabase
       .from('assets')
-      .select('*, profiles(username)')
+      .select('id, title, description, storage_path, uploader_id')
       .eq('approved', false)
 
     if (error) {
-      console.error(error)
+      console.error('Error fetching pending assets:', error)
     } else {
-      setAssets(data || [])
+      // For now, set profiles as null since join is causing issues
+      const assetsWithProfiles = (data || []).map(asset => ({
+        ...asset,
+        profiles: null
+      }))
+      setAssets(assetsWithProfiles)
     }
     setLoading(false)
   }
