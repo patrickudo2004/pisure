@@ -98,11 +98,9 @@ export default function Home() {
               <div key={asset.id} className="break-inside-avoid mb-4">
                 <Link href={`/asset/${asset.id}`}>
                   <div className="relative group cursor-pointer">
-                    <Image
+                    <img
                       src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/${asset.storage_path}`}
                       alt={asset.title}
-                      width={300}
-                      height={200}
                       className="w-full h-auto rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
                     />
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-end">
