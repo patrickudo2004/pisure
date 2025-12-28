@@ -23,7 +23,7 @@ export default function AdminPage() {
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user || user.email !== 'admin@pisure.com') { // Hardcoded admin email
+      if (!user || user.email !== 'patrickudo2004@outlook.com') { // Admin email
         router.push('/')
         return
       }
