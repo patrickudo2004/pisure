@@ -57,7 +57,7 @@ CREATE POLICY "Admins can update all assets" ON assets
   FOR UPDATE USING (auth.jwt() ->> 'email' = 'patrickudo2004@outlook.com');
 
 -- Create storage bucket for assets
-INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', true);
 
 -- Storage policies
 CREATE POLICY "Anyone can view approved assets" ON storage.objects
