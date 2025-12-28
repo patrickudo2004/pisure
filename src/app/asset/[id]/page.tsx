@@ -47,14 +47,9 @@ export default function AssetDetailPage() {
     if (!asset) return
 
     // Get download URL
-    const { data, error } = supabase.storage
+    const { data } = supabase.storage
       .from('assets')
       .getPublicUrl(asset.storage_path)
-
-    if (error) {
-      alert('Error getting download URL')
-      return
-    }
 
     // Open download in new tab
     window.open(data.publicUrl, '_blank')
