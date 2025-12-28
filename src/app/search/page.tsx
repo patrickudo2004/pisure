@@ -6,6 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 interface Asset {
   id: string
   title: string
@@ -31,14 +33,19 @@ export default function SearchPage() {
   const searchAssets = async (searchQuery: string) => {
     const { data, error } = await supabase
       .from('assets')
-      .select('id, title, storage_path, uploader_id, profiles(username)')
+      .select('id, title, storage_path, uploader_id')
       .eq('approved', true)
       .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,tags.cs.{${searchQuery}},category.ilike.%${searchQuery}%`)
 
     if (error) {
-      console.error(error)
+      console.error('Error searching assets:', error)
     } else {
-      setAssets(data || [])
+      // For now, set profiles as null since join is causing issues
+      const assetsWithProfiles = (data || []).map(asset => ({
+        ...asset,
+        profiles: null
+      }))
+      setAssets(assetsWithProfiles)
     }
     setLoading(false)
   }
