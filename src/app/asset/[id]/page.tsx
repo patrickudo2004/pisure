@@ -30,15 +30,16 @@ export default function AssetDetailPage() {
   const fetchAsset = async () => {
     const { data, error } = await supabase
       .from('assets')
-      .select('*, profiles(username)')
+      .select('id, title, description, tags, category, storage_path, uploader_id, downloads')
       .eq('id', id)
       .eq('approved', true)
       .single()
 
     if (error) {
-      console.error(error)
+      console.error('Error fetching asset:', error)
     } else {
-      setAsset(data)
+      // For now, set profiles as null since join is causing issues
+      setAsset({ ...data, profiles: null })
     }
     setLoading(false)
   }
