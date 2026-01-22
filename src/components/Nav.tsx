@@ -7,18 +7,45 @@ import { useEffect, useState } from 'react'
 
 export default function Nav() {
   const [user, setUser] = useState<any>(null)
+  const [username, setUsername] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single()
+        
+        if (profile?.username) {
+          setUsername(profile.username)
+        }
+      }
     }
     getUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setUser(session?.user ?? null)
+        
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profile?.username) {
+            setUsername(profile.username)
+          }
+        } else {
+          setUsername(null)
+        }
       }
     )
 
@@ -45,9 +72,11 @@ export default function Nav() {
                 <Link href="/upload" className="text-gray-700 hover:text-gray-900">
                   Upload
                 </Link>
-                <Link href={`/profile/${user.id}`} className="text-gray-700 hover:text-gray-900">
-                  Profile
-                </Link>
+                {username && (
+                  <Link href={`/profile/${username}`} className="text-gray-700 hover:text-gray-900">
+                    Profile
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="text-gray-700 hover:text-gray-900"
