@@ -70,3 +70,42 @@ Update `Nav.tsx` to fetch and use the user's username instead of ID for the prof
 - New users who haven't set up their profile yet
 - Users without a username in the profiles table
 - Race condition between auth state and profile data loading
+
+---
+
+## Implementation Notes
+
+### Changes Made
+**File Modified**: `src/components/Nav.tsx`
+
+1. **Added username state** (line 10):
+   - Added `useState<string | null>(null)` to track the user's username
+
+2. **Fetched username on initial load** (lines 18-28):
+   - When user is authenticated, query `profiles` table for username
+   - Store username in state if found
+
+3. **Fetched username on auth state change** (lines 36-45):
+   - When auth state changes to authenticated, fetch and store username
+   - Clear username state when user logs out
+
+4. **Updated profile link** (lines 75-79):
+   - Changed from `/profile/${user.id}` to `/profile/${username}`
+   - Conditionally render Profile link only when username is available
+   - This prevents broken links during loading or for users without usernames
+
+### Edge Case Handling
+- **Profile link is hidden** until username is fetched to prevent navigation to invalid routes
+- **Username is cleared** on logout to prevent stale data
+- **Null check** ensures profile link only renders when username exists
+
+### Test Results
+- **Manual verification**: Code syntax is correct
+- **Build/Lint**: Unable to run due to dependency installation timeout
+- **Code review**: Implementation follows React best practices and TypeScript typing
+
+### Recommendation
+Once dependencies are installed, run:
+- `npm run build` - Verify no TypeScript errors
+- `npm run lint` - Verify code style compliance
+- Manual testing - Verify profile navigation works correctly in browser
