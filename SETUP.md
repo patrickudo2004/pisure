@@ -70,9 +70,12 @@ report flow → reject cleans R2.
 ## 7. Deploy to Vercel
 
 1. Push to GitHub, import the repo in Vercel.
-2. Add all env vars from `.env.example` in Project → Settings → Environment
-   Variables.
+2. **Add all env vars from `.env.example` in Project → Settings → Environment
+   Variables** — the build needs them at runtime; every field is listed in
+   `.env.local` on your machine, copy the values across (use the *pooled*
+   `DATABASE_URL`).
 3. When you buy the domain (Cloudflare Registrar or Porkbun recommended):
    - Point `pisure.com` → Vercel (follow their domain wizard), and
    - `images.pisure.com` → the R2 bucket custom domain.
-   - Set `NEXT_PUBLIC_SITE_URL=https://www.pisure.com`.
+   - Set `NEXT_PUBLIC_SITE_URL=https://www.pisure.com`, and add the production
+     URL to the R2 bucket's CORS `AllowedOrigins`.
