@@ -14,14 +14,23 @@ export default function AssetGrid({
   if (assets.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-muted">{emptyMessage ?? "Nothing here yet."}</p>
+        <p className="text-muted">
+          {emptyMessage ?? "Nothing here yet."}
+        </p>
+        <p className="mt-2 text-sm text-muted">
+          Be among the first photographers on Pisure —{" "}
+          <Link href="/upload" className="text-accent hover:underline">
+            upload a photo
+          </Link>{" "}
+          and own this corner of the gallery.
+        </p>
         {emptyTags && emptyTags.length > 0 && (
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
             {emptyTags.map((tag) => (
               <Link
                 key={tag}
                 href={`/search?q=${encodeURIComponent(tag)}`}
-                className="rounded-full border border-border px-3 py-1 text-sm hover:border-accent hover:text-accent"
+                className="rounded-full border border-border px-3 py-1 text-sm transition hover:border-accent hover:text-accent"
               >
                 {tag}
               </Link>
