@@ -1,69 +1,44 @@
-# Pisure - Royalty-Free Stock Photos & Videos for Africa
+# Pisure — Royalty-Free African Stock Photos
 
-Pisure is a platform for discovering and sharing royalty-free visuals focused on African themes, created by and for Africans.
+**Visuals for Africa, by Africa.** A platform for discovering and sharing
+royalty-free photography focused on African themes, created by and for
+Africans. All photos are free under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-## Features
+## Stack
 
-- **Homepage**: Browse trending African visuals
-- **Search**: Find assets by keywords, tags, or categories
-- **Upload**: Contribute your own photos and videos (requires approval)
-- **Download**: Free downloads with attribution encouragement
-- **Profiles**: Showcase creator portfolios
-- **Admin Dashboard**: Moderate uploads
+| Layer | Choice | Cost |
+|---|---|---|
+| App | Next.js (App Router) on Vercel | free |
+| Database | Neon serverless Postgres + Drizzle ORM | free |
+| Auth | Better Auth (self-hosted, email/password + Google) | free |
+| Images | Cloudflare R2 + CDN on a custom domain | free tier (10 GB, zero egress) |
 
-## Tech Stack
+Total running cost: the domain.
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
-- **Backend**: Supabase (Auth, PostgreSQL, Storage)
-- **Deployment**: Vercel
+## Architecture highlights
 
-## Setup
+- **Direct-to-R2 uploads** — the browser uploads three derivatives (original /
+  1280px web / 400px thumb) via presigned URLs; the server never proxies image bytes.
+- **EXIF stripped client-side** at upload (including GPS metadata).
+- **Server-rendered pages** with per-asset OpenGraph metadata, sitemap, and
+  category landing pages — built to rank on Google Images.
+- **Server-side security** — session + admin checks live in server components
+  and API routes, never in the client; all queries are parameterized (Drizzle).
+- **Moderation workflow** — uploads start `pending`; an admin approves or
+  rejects (rejection deletes both the DB row and the R2 objects).
 
-1. **Clone the repository**
-   ```bash
-   git clone <repo-url>
-   cd pisure
-   ```
+## Development
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+cp .env.example .env.local   # fill from SETUP.md
+npm install
+npx drizzle-kit push         # create tables
+npm run dev
+```
 
-3. **Set up Supabase**
-   - Create a new project at [supabase.com](https://supabase.com)
-   - Run the SQL migration in `supabase/migrations/001_initial_schema.sql`
-   - Enable Google OAuth if desired
-   - Create an admin user with email `admin@pisure.com`
-
-4. **Configure environment variables**
-   - Copy `.env.local` and fill in your Supabase URLs and keys
-
-5. **Run the development server**
-   ```bash
-   npm run dev
-   ```
-
-## Database Schema
-
-- `profiles`: User profiles with bio, avatar, etc.
-- `assets`: Uploaded photos/videos with metadata
-
-## Deployment
-
-Deploy to Vercel by connecting your GitHub repo. Ensure environment variables are set in Vercel dashboard.
-
-## Seed Data
-
-To add initial assets:
-1. Sign up as admin@pisure.com
-2. Upload some African-themed images/videos
-3. Approve them via /admin
-
-## Contributing
-
-Contributions welcome! Focus on African representation and user experience.
+Full infrastructure walkthrough: **[SETUP.md](./SETUP.md)**.
 
 ## License
 
-All user-uploaded content is royalty-free. Platform code is MIT licensed.
+Platform code: MIT (see `LICENSE`). User-uploaded photos: CC BY 4.0 —
+attribution required, commercial use allowed.

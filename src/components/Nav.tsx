@@ -1,102 +1,81 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { authClient } from "@/lib/auth-client";
+
+type SessionPayload = {
+  user: { id: string; name?: string | null; email: string; role?: string | null } | null;
+};
 
 export default function Nav() {
-  const [user, setUser] = useState<any>(null)
-  const [username, setUsername] = useState<string | null>(null)
-  const router = useRouter()
+  const [session, setSession] = useState<SessionPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single()
-        
-        if (profile?.username) {
-          setUsername(profile.username)
-        }
-      }
-    }
-    getUser()
+    authClient
+      .getSession()
+      .then((res: { data: SessionPayload | null }) => setSession(res.data))
+      .finally(() => setLoading(false));
+  }, []);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', session.user.id)
-            .single()
-          
-          if (profile?.username) {
-            setUsername(profile.username)
-          }
-        } else {
-          setUsername(null)
-        }
-      }
-    )
+  const user = session?.user ?? null;
 
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+  async function handleLogout() {
+    await authClient.signOut();
+    setSession(null);
+    router.push("/");
+    router.refresh();
   }
 
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link href="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-gray-900">Pisure</span>
-            </Link>
-          </div>
-          <div className="flex items-center space-x-4">
-            {user ? (
-              <>
-                <Link href="/upload" className="text-gray-700 hover:text-gray-900">
-                  Upload
+    <nav className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-lg font-bold tracking-tight">
+            Pisure<span className="text-accent">.</span>
+          </Link>
+          <Link
+            href="/search"
+            className="hidden text-sm text-muted hover:text-foreground sm:block"
+          >
+            Search
+          </Link>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          {loading ? (
+            <span className="h-5 w-16 animate-pulse rounded bg-surface" />
+          ) : user ? (
+            <>
+              <Link href="/upload" className="font-medium text-accent hover:opacity-80">
+                Upload
+              </Link>
+              {user.role === "admin" && (
+                <Link href="/admin" className="text-muted hover:text-foreground">
+                  Admin
                 </Link>
-                {username && (
-                  <Link href={`/profile/${username}`} className="text-gray-700 hover:text-gray-900">
-                    Profile
-                  </Link>
-                )}
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-700 hover:text-gray-900"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-gray-700 hover:text-gray-900">
-                  Login
-                </Link>
-                <Link href="/signup" className="text-gray-700 hover:text-gray-900">
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </div>
+              )}
+              <button onClick={handleLogout} className="text-muted hover:text-foreground">
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="text-muted hover:text-foreground">
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-foreground hover:opacity-90"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>
-  )
+  );
 }

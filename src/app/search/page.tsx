@@ -1,96 +1,94 @@
-'use client'
+import Link from "next/link";
+import AssetGrid from "@/components/AssetGrid";
+import { searchApprovedAssets } from "@/lib/assets";
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import Image from 'next/image'
+export const dynamic = "force-dynamic";
 
-export const dynamic = 'force-dynamic'
+export const metadata = { title: "Search" };
 
-interface Asset {
-  id: string
-  title: string
-  storage_path: string
-  uploader_id: string
-  profiles: any
-}
+const PAGE_SIZE = 24;
 
-export default function SearchPage() {
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const { q, page } = await searchParams;
+  const query = (q ?? "").trim().slice(0, 100);
+  const pageNum = Math.max(1, Number(page) || 1);
+  const assets = query
+    ? await searchApprovedAssets(query, PAGE_SIZE, (pageNum - 1) * PAGE_SIZE)
+    : [];
+  const hasNext = assets.length === PAGE_SIZE;
 
-  useEffect(() => {
-    // Get query from URL
-    const urlParams = new URLSearchParams(window.location.search)
-    const q = urlParams.get('q') || ''
-    setQuery(q)
-
-    if (q) {
-      searchAssets(q)
-    } else {
-      setLoading(false)
-    }
-  }, [])
-
-  const searchAssets = async (searchQuery: string) => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('id, title, storage_path, uploader_id')
-      .eq('approved', true)
-      .or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%,tags.cs.{${searchQuery}},category.ilike.%${searchQuery}%`)
-
-    if (error) {
-      console.error('Error searching assets:', error)
-    } else {
-      // For now, set profiles as null since join is causing issues
-      const assetsWithProfiles = (data || []).map(asset => ({
-        ...asset,
-        profiles: null
-      }))
-      setAssets(assetsWithProfiles)
-    }
-    setLoading(false)
-  }
+  const baseParams = (p: number) =>
+    `/search?q=${encodeURIComponent(query)}${p > 1 ? `&page=${p}` : ""}`;
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-4">Search Results</h1>
-          {query && <p className="text-gray-600">Showing results for "{query}"</p>}
-        </div>
-
-        {loading ? (
-          <div className="text-center">Searching...</div>
-        ) : assets.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No assets found for "{query}". Try different keywords.
-          </div>
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h1 className="text-3xl font-bold">
+        {query ? (
+          <>
+            Results for <span className="text-accent">“{query}”</span>
+          </>
         ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
-            {assets.map((asset) => (
-              <div key={asset.id} className="break-inside-avoid mb-4">
-                <Link href={`/asset/${asset.id}`}>
-                  <div className="relative group cursor-pointer">
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/${asset.storage_path}`}
-                      alt={asset.title}
-                      className="w-full h-auto rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-end">
-                      <div className="p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        <h3 className="font-semibold">{asset.title}</h3>
-                        <p className="text-sm">by {asset.profiles?.username || 'Unknown'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
+          "Search"
+        )}
+      </h1>
+      <form action="/search" method="get" className="mt-6 flex max-w-md">
+        <input
+          type="search"
+          name="q"
+          defaultValue={query}
+          placeholder="Search African visuals…"
+          className="flex-1 rounded-l-md border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent"
+        />
+        <button
+          type="submit"
+          className="rounded-r-md bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground hover:opacity-90"
+        >
+          Search
+        </button>
+      </form>
+
+      <div className="mt-10">
+        {query ? (
+          <AssetGrid
+            assets={assets}
+            emptyMessage={`No visuals found for “${query}”. Try a different keyword.`}
+            emptyTags={["Lagos", "Market", "Culture", "Wildlife", "Wedding"]}
+          />
+        ) : (
+          <p className="text-muted">
+            Type a keyword above, or browse{" "}
+            <Link href="/" className="text-accent hover:underline">
+              the latest visuals
+            </Link>
+            .
+          </p>
         )}
       </div>
+
+      {query && (
+        <div className="mt-8 flex justify-center gap-3">
+          {pageNum > 1 && (
+            <Link
+              href={baseParams(pageNum - 1)}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:border-accent"
+            >
+              ← Previous
+            </Link>
+          )}
+          {hasNext && (
+            <Link
+              href={baseParams(pageNum + 1)}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:border-accent"
+            >
+              Next →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
-  )
+  );
 }

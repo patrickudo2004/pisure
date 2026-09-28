@@ -1,149 +1,146 @@
-'use client'
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import AssetGrid from "@/components/AssetGrid";
+import {
+  getApprovedAsset,
+  getRelatedAssets,
+  attributionLine,
+} from "@/lib/assets";
+import { publicUrl } from "@/lib/r2";
+import AssetActions from "@/components/AssetActions";
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import Image from 'next/image'
-import { useParams } from 'next/navigation'
+export const dynamic = "force-dynamic";
 
-interface Asset {
-  id: string
-  title: string
-  description: string
-  tags: string[]
-  category: string
-  storage_path: string
-  uploader_id: string
-  downloads: number
-  profiles: any
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const result = await getApprovedAsset(id);
+  if (!result) return { title: "Asset not found" };
+
+  const { asset, username } = result;
+  const title = `${asset.title} — free stock photo`;
+  const description =
+    asset.description ??
+    `Download “${asset.title}” by ${username ?? "a Pisure creator"} for free under CC BY 4.0.`;
+
+  return {
+    title: asset.title,
+    description,
+    alternates: { canonical: `/asset/${asset.id}` },
+    openGraph: {
+      title,
+      description,
+      images: [{ url: publicUrl(asset.webKey), width: asset.width, height: asset.height }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [publicUrl(asset.webKey)],
+    },
+  };
 }
 
-export default function AssetDetailPage() {
-  const [asset, setAsset] = useState<Asset | null>(null)
-  const [loading, setLoading] = useState(true)
-  const params = useParams()
-  const id = params.id as string
+export default async function AssetDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const result = await getApprovedAsset(id);
+  if (!result) notFound();
 
-  useEffect(() => {
-    fetchAsset()
-  }, [id])
-
-  const fetchAsset = async () => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('id, title, description, tags, category, storage_path, uploader_id, downloads')
-      .eq('id', id)
-      .eq('approved', true)
-      .single()
-
-    if (error) {
-      console.error('Error fetching asset:', error)
-    } else {
-      // For now, set profiles as null since join is causing issues
-      setAsset({ ...data, profiles: null })
-    }
-    setLoading(false)
-  }
-
-  const handleDownload = async (size: 'original' | 'medium' = 'original') => {
-    if (!asset) return
-
-    // Get download URL
-    const { data } = supabase.storage
-      .from('assets')
-      .getPublicUrl(asset.storage_path)
-
-    // Open download in new tab
-    window.open(data.publicUrl, '_blank')
-
-    // Increment download count
-    await supabase
-      .from('assets')
-      .update({ downloads: asset.downloads + 1 })
-      .eq('id', id)
-  }
-
-  if (loading) {
-    return <div className="text-center py-12">Loading...</div>
-  }
-
-  if (!asset) {
-    return <div className="text-center py-12">Asset not found</div>
-  }
-
-  const isVideo = asset.storage_path.toLowerCase().includes('.mp4') || asset.storage_path.toLowerCase().includes('.mov')
+  const { asset, username } = result;
+  const related = await getRelatedAssets(asset.id, asset.category, asset.tags);
+  const attribution = attributionLine(asset.title, username);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Asset Display */}
-          <div>
-            {isVideo ? (
-              <video
-                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/${asset.storage_path}`}
-                controls
-                className="w-full rounded-lg shadow-lg"
-              />
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[2fr_1fr]">
+        <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={publicUrl(asset.webKey)}
+            alt={asset.title}
+            className="max-h-[80vh] w-auto rounded-lg shadow-lg"
+          />
+        </div>
+
+        <div>
+          <h1 className="text-2xl font-bold">{asset.title}</h1>
+          <p className="mt-1 text-muted">
+            by{" "}
+            {username ? (
+              <Link href={`/profile/${username}`} className="text-accent hover:underline">
+                {username}
+              </Link>
             ) : (
-              <Image
-                src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/${asset.storage_path}`}
-                alt={asset.title}
-                width={800}
-                height={600}
-                className="w-full h-auto rounded-lg shadow-lg"
-              />
+              "Unknown creator"
             )}
+          </p>
+          {asset.description && (
+            <p className="mt-4 text-sm leading-relaxed">{asset.description}</p>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/category/${asset.category.toLowerCase()}`}
+              className="rounded-full bg-surface px-3 py-1 text-xs font-medium hover:text-accent"
+            >
+              {asset.category}
+            </Link>
+            {asset.tags.map((tag) => (
+              <Link
+                key={tag}
+                href={`/search?q=${encodeURIComponent(tag)}`}
+                className="rounded-full border border-border px-3 py-1 text-xs hover:border-accent hover:text-accent"
+              >
+                {tag}
+              </Link>
+            ))}
           </div>
 
-          {/* Metadata and Actions */}
-          <div>
-            <h1 className="text-3xl font-bold mb-4">{asset.title}</h1>
-            <p className="text-gray-600 mb-4">by {asset.profiles?.username || 'Unknown'}</p>
-            {asset.description && (
-              <p className="text-gray-700 mb-4">{asset.description}</p>
-            )}
-            <div className="mb-4">
-              <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2">
-                {asset.category}
-              </span>
-              {asset.tags.map((tag, index) => (
-                <span key={index} className="inline-block bg-blue-200 rounded-full px-3 py-1 text-sm font-semibold text-blue-700 mr-2">
-                  {tag}
-                </span>
-              ))}
+          <dl className="mt-6 space-y-1 text-sm text-muted">
+            <div className="flex justify-between">
+              <dt>Dimensions</dt>
+              <dd className="text-foreground">
+                {asset.width} × {asset.height}
+              </dd>
             </div>
-            <div className="mb-6">
-              <p className="text-sm text-gray-500">{asset.downloads} downloads</p>
+            <div className="flex justify-between">
+              <dt>File size</dt>
+              <dd className="text-foreground">{(asset.sizeBytes / 1024 / 1024).toFixed(1)} MB</dd>
             </div>
+            <div className="flex justify-between">
+              <dt>Downloads</dt>
+              <dd className="text-foreground">{asset.downloads}</dd>
+            </div>
+          </dl>
 
-            {/* Download Buttons */}
-            <div className="space-y-4">
-              <button
-                onClick={() => handleDownload('original')}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700"
-              >
-                Download Original
-              </button>
-              {!isVideo && (
-                <button
-                  onClick={() => handleDownload('medium')}
-                  className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700"
-                >
-                  Download Medium (Web)
-                </button>
-              )}
-            </div>
+          <AssetActions assetId={asset.id} attribution={attribution} />
 
-            {/* Attribution Note */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
-                <strong>Attribution:</strong> We encourage you to credit the creator when using this asset.
-                Example: "Photo by {asset.profiles?.username || 'Creator'} on Pisure"
-              </p>
-            </div>
+          <div className="mt-6 rounded-lg bg-surface p-4 text-sm">
+            <p className="font-medium">License: CC BY 4.0</p>
+            <p className="mt-1 text-muted">
+              Free for personal and commercial use with attribution.{" "}
+              <Link href="/license" className="text-accent hover:underline">
+                Read the license
+              </Link>
+            </p>
           </div>
         </div>
       </div>
+
+      {related.length > 0 && (
+        <section className="mt-16">
+          <h2 className="mb-6 text-xl font-semibold">Related visuals</h2>
+          <AssetGrid assets={related} />
+        </section>
+      )}
     </div>
-  )
+  );
 }

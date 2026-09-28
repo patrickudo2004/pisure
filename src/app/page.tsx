@@ -1,121 +1,100 @@
-'use client'
+import Link from "next/link";
+import AssetGrid from "@/components/AssetGrid";
+import { listApprovedAssets } from "@/lib/assets";
 
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import Image from 'next/image'
+export const dynamic = "force-dynamic";
 
-interface Asset {
-  id: string
-  title: string
-  storage_path: string
-  uploader_id: string
-  profiles: any
-}
+const CATEGORIES = [
+  "People",
+  "Urban",
+  "Culture",
+  "Nature",
+  "Wildlife",
+  "Food",
+  "Business",
+  "Other",
+] as const;
 
-export default function Home() {
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
+const PAGE_SIZE = 24;
 
-  useEffect(() => {
-    fetchAssets()
-  }, [])
-
-  const fetchAssets = async () => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('id, title, storage_path, uploader_id')
-      .eq('approved', true)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (error) {
-      console.error('Error fetching assets:', error)
-    } else {
-      // For now, set profiles as null since join is causing issues
-      const assetsWithProfiles = (data || []).map(asset => ({
-        ...asset,
-        profiles: null
-      }))
-      setAssets(assetsWithProfiles)
-    }
-    setLoading(false)
-  }
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`
-    }
-  }
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const assets = await listApprovedAssets(PAGE_SIZE, (pageNum - 1) * PAGE_SIZE);
+  const hasNext = assets.length === PAGE_SIZE;
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-green-400 to-blue-500 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Visuals for Africa, by Africa
-            </h1>
-            <p className="text-xl md:text-2xl mb-8">
-              Discover and download royalty-free photos and videos showcasing the beauty and diversity of Africa.
-            </p>
-            <form onSubmit={handleSearch} className="max-w-md mx-auto">
-              <div className="flex">
-                <input
-                  type="text"
-                  placeholder="Search for African visuals..."
-                  className="flex-1 px-4 py-2 rounded-l-md text-gray-900"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  className="bg-gray-800 px-6 py-2 rounded-r-md hover:bg-gray-700"
-                >
-                  Search
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      {/* Assets Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h2 className="text-2xl font-bold mb-8">Trending Assets</h2>
-        {loading ? (
-          <div className="text-center">Loading...</div>
-        ) : assets.length === 0 ? (
-          <div className="text-center text-gray-500">
-            No assets available yet. Be the first to upload!
-          </div>
-        ) : (
-          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
-            {assets.map((asset) => (
-              <div key={asset.id} className="break-inside-avoid mb-4">
-                <Link href={`/asset/${asset.id}`}>
-                  <div className="relative group cursor-pointer">
-                    <img
-                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/assets/${asset.storage_path}`}
-                      alt={asset.title}
-                      className="w-full h-auto rounded-lg shadow-md group-hover:shadow-lg transition-shadow"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-end">
-                      <div className="p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        <h3 className="font-semibold">{asset.title}</h3>
-                        <p className="text-sm">by {asset.profiles?.username || 'Unknown'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </div>
+    <div>
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center sm:px-6 lg:px-8">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+            Visuals for Africa, <span className="text-accent">by Africa</span>
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted">
+            Discover and download royalty-free photos showcasing the beauty and
+            diversity of Africa — free for everyone under CC BY 4.0.
+          </p>
+          <form action="/search" method="get" className="mx-auto mt-8 flex max-w-md">
+            <input
+              type="search"
+              name="q"
+              placeholder="Search: Lagos, market, wedding…"
+              className="flex-1 rounded-l-md border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent"
+            />
+            <button
+              type="submit"
+              className="rounded-r-md bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground hover:opacity-90"
+            >
+              Search
+            </button>
+          </form>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {CATEGORIES.map((cat) => (
+              <Link
+                key={cat}
+                href={`/category/${cat.toLowerCase()}`}
+                className="rounded-full border border-border bg-background px-3 py-1 text-sm hover:border-accent hover:text-accent"
+              >
+                {cat}
+              </Link>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mb-6 flex items-baseline justify-between">
+          <h2 className="text-xl font-semibold">Latest visuals</h2>
+          <span className="text-sm text-muted">Page {pageNum}</span>
+        </div>
+        <AssetGrid
+          assets={assets}
+          emptyMessage="No visuals yet. Be the first to upload Africa's story."
+          emptyTags={["Nigeria", "Kenya", "Market day", "Wedding"]}
+        />
+        <div className="mt-8 flex justify-center gap-3">
+          {pageNum > 1 && (
+            <Link
+              href={pageNum === 2 ? "/" : `/?page=${pageNum - 1}`}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:border-accent"
+            >
+              ← Newer
+            </Link>
+          )}
+          {hasNext && (
+            <Link
+              href={`/?page=${pageNum + 1}`}
+              className="rounded-md border border-border px-4 py-2 text-sm hover:border-accent"
+            >
+              Older →
+            </Link>
+          )}
+        </div>
+      </section>
     </div>
-  )
+  );
 }
