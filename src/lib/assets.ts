@@ -68,8 +68,10 @@ export async function searchApprovedAssets(
         or(
           ilike(assets.title, term),
           ilike(assets.description, term),
-          ilike(assets.category, term),
-          arrayOverlaps(assets.tags, [q]),
+          // category is a Postgres enum — cast to text before ILIKE
+          sql`${assets.category}::text ilike ${term}`,
+          // explicit text[] cast so the driver binds the array correctly
+          sql`${assets.tags} && ARRAY[${q}]::text[]`,
         ),
       ),
     )
@@ -144,7 +146,10 @@ export async function getRelatedAssets(
       and(
         eq(assets.status, "approved"),
         sql`${assets.id} <> ${id}`,
-        or(sql`${assets.category} = ${category}`, arrayOverlaps(assets.tags, tags)),
+        or(
+          sql`${assets.category} = ${category}`,
+          sql`${assets.tags} && ARRAY[${sql.join(tags.map((t) => sql`${t}`), sql`, `)}]::text[]`,
+        ),
       ),
     )
     .orderBy(desc(assets.createdAt))

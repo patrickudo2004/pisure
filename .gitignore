@@ -31,3 +31,8 @@ next-env.d.ts
 
 # local tooling (portable node etc.)
 .tooling
+
+# local smoke-test artifacts & credentials
+.admin-creds.txt
+.dev.log
+.smoke-*.mjs
